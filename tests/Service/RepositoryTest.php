@@ -5,6 +5,7 @@ namespace Bianes\CommissionTask\Tests\Service;
 
 use Bianes\CommissionTask\Entity\CashinCommission;
 use Bianes\CommissionTask\Entity\CashinOperation;
+use Bianes\CommissionTask\Entity\CashoutCommission;
 use Bianes\CommissionTask\Entity\CashoutOperation;
 use Bianes\CommissionTask\Entity\LegalUser;
 use Bianes\CommissionTask\Entity\NaturalUser;
@@ -90,6 +91,35 @@ final class RepositoryTest extends TestCase
         $this->assertInstanceOf(
             CashoutOperation::class,
             $this->repository->createOperation($user,'cash_out', '100', '2020-01-01', 'EUR')
+        );
+    }
+
+    /**
+     * @throws \ReflectionException
+     */
+    public function testGetCommission()
+    {
+        $reflection = new \ReflectionObject($this->repository);
+        $property = $reflection->getProperty('commissions');
+        $property->setAccessible(true);
+        $property->setValue(
+            $this->repository,
+            [Repository::CASH_OUT => [Repository::NATURAL => new CashoutCommission(1)]]
+        );
+
+        $this->assertInstanceOf(
+            CashoutCommission::class,
+            $this->repository->getCommission(
+                new CashoutOperation('100', '2010-01-01', 'EUR'),
+                new NaturalUser(1)
+            )
+        );
+
+        $this->assertNull(
+            $this->repository->getCommission(
+                new CashoutOperation('100', '2010-01-01', 'EUR'),
+                new LegalUser(1)
+            )
         );
     }
 

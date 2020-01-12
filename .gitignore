@@ -1,2 +1,4 @@
 /vendor
 /.idea
+/csv
+**/.DS_Store

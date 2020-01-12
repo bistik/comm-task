@@ -1,4 +1,5 @@
 <?php
+declare(strict_types=1);
 
 require __DIR__ . '/vendor/autoload.php';
 
@@ -7,24 +8,13 @@ use Bianes\CommissionTask\Entity\CashoutCommission;
 use Bianes\CommissionTask\Service\CashinCalculator;
 use Bianes\CommissionTask\Service\CashoutCalculator;
 use Bianes\CommissionTask\Service\Repository;
-use Bianes\Entity\Operation;
 
-$data = [
-    ['2014-12-31', 4, 'natural', 'cash_out', 1200.00, 'EUR'],
-    ['2015-01-01', 4, 'natural', 'cash_out', 1000.00, 'EUR'],
-    ['2016-01-05', 4, 'natural', 'cash_out', 1000.00, 'EUR'],
-    ['2016-01-05', 1, 'natural', 'cash_in', 200.00, 'EUR'],
-    ['2016-01-06', 2, 'legal', 'cash_out', 300.00, 'EUR'],
-    ['2016-01-07', 1, 'natural', 'cash_out', 1000.00, 'EUR'],
-    ['2016-01-10', 1, 'natural', 'cash_out', 100.00, 'EUR'],
-    ['2016-01-10', 2, 'legal', 'cash_in', 1000000.00, 'EUR'],
-    ['2016-01-10', 3, 'natural', 'cash_out', 1000.00, 'EUR'],
-    ['2016-02-15', 1, 'natural', 'cash_out', 300.00, 'EUR'],
-    ['2016-01-07', 1, 'natural', 'cash_out', 100.00, 'USD'],
-    ['2016-02-19', 5, 'natural', 'cash_out', 3000000, 'JPY']
-];
-
-computeCommission($data);
+$csvFile = $argv[1] ?? null;
+if ($csvFile === null) {
+    die('Csv file not found');
+}
+$rows = getCsvRows($csvFile);
+computeCommission($rows);
 
 /**
  * @param array $rows
@@ -32,7 +22,8 @@ computeCommission($data);
  * @throws \Bianes\CommissionTask\Exception\InvalidOperationTypeException
  * @throws \Bianes\CommissionTask\Exception\InvalidUserTypeException
  */
-function computeCommission(array $rows) {
+function computeCommission(array $rows)
+{
     $repository = new Repository();
     $cashinCommission = new CashinCommission(0.03, 5.0);
     $repository->addCommission(Repository::CASH_IN, Repository::NATURAL, $cashinCommission);
@@ -52,7 +43,7 @@ function computeCommission(array $rows) {
     $cashoutCalculator = new CashoutCalculator();
 
     foreach ($rows as $row) {
-        $user = $repository->createUser($row[2], $row[1]);
+        $user = $repository->createUser($row[2], (int)$row[1]);
         $operation = $repository->createOperation($user, $row[3], $row[4], $row[0],$row[5]);
         $commission = $repository->getCommission($operation, $user);
 
@@ -64,4 +55,22 @@ function computeCommission(array $rows) {
             echo $cashoutCalculator->computeFee($commission, $operation, $user) . "\n";
         }
     }
+}
+
+function getCsvRows(string $filename = null): array
+{
+    if ($filename === null) {
+        return [];
+    }
+
+    /** @var mixed[] */
+    $rows = [];
+    if (($handle = fopen($filename, "r")) !== FALSE) {
+        while (($data = fgetcsv($handle, 1000, ",")) !== FALSE) {
+            $rows[] = $data;
+        }
+        fclose($handle);
+    }
+
+    return $rows;
 }
